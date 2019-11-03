@@ -1,5 +1,5 @@
 const FRAME_RATE = 30;
-const RATING_THRESHOLD = 0.05;
+const RATING_THRESHOLD = 0.06;
 
 function luminance(r, g, b) {
     r /= 255;
@@ -77,29 +77,47 @@ function injectDiv() {
     div.style.left=0;
     div.style.top=0;
     div.style.right=0;
-    div.style.left=0;
+    div.style.bottom=0;
     div.style.overflow="scroll";
-    // div.innerHTML = `
-    // <canvas id="indicator" width=20 height=20></canvas><br>
-    // <canvas id="canvas" width=480 height=360></canvas><br>
-    // <canvas id="canvas2" width=480 height=360></canvas><br>
-    // <canvas id="canvas3" width=480 height=360></canvas><br>
-    // <canvas id="bar" width=600 height=20></canvas><br>
-    // <input id="threshold" type="range" min=0 max=0.3 step=0.01 value=0.06>`
-    const video = document.querySelector("video").cloneNode(true);
-    div.appendChild(video);
+    div.innerHTML = `
+    <canvas id="indicator" width=20 height=20></canvas>
+    <canvas id="canvas" width=480 height=360></canvas>
+    <canvas id="canvas2" width=480 height=360></canvas>
+    <canvas id="canvas3" width=480 height=360></canvas>
+    <canvas id="bar" width=600 height=20></canvas>
+    <input id="threshold" type="range" min=0 max=0.3 step=0.01 value=0.06>`
     document.body.appendChild(div);
-    video.play();
 }
-injectDiv();
+
+function injectTopBar() {
+    const div = document.createElement("DIV");
+    div.style.position="fixed";
+    div.style.left=0;
+    div.style.top=0;
+    div.style.right=0;
+    div.style.height="10px";
+    div.style.zIndex = 10000;
+    const indicator = document.createElement("CANVAS");
+    indicator.width = 600;
+    indicator.height = 20;
+    indicator.style.margin = 0;
+    indicator.style.width="100%";
+    indicator.style.height="10px";
+    indicator.style.left = 0;
+    indicator.style.top = 0;
+    indicator.id = "bar";
+    div.appendChild(indicator);
+    document.body.appendChild(div);
+}
+injectTopBar();
 
 class VideoAnalyzer {
     constructor(videoElem) {
-        injectDiv();
+        //injectDiv();
         this.video = videoElem; //TODO: clone video off screen instead
-        this.shadow = this.video.cloneNode(true);
+        this.shadow = this.video;
         this.shadow.muted = true;
-        this.shadow.playbackRate = 2;
+        this.shadow.playbackRate = 1;
         console.log(this.shadow);
         this.canvas = document.getElementById("canvas");
         this.canvas.width = 480;
@@ -113,7 +131,7 @@ class VideoAnalyzer {
         this.canvas3.width = 480;
         this.canvas3.height = 360;
         this.ctx3 = this.canvas3.getContext("2d");
-        this.indicatorCtx = document.getElementById("indicator").getContext("2d");
+        //this.indicatorCtx = document.getElementById("indicator").getContext("2d");
 
         this.barCanvas = document.getElementById("bar");
         this.barCtx = this.barCanvas.getContext("2d");
@@ -127,7 +145,8 @@ class VideoAnalyzer {
     }
 
     handleSeek() {
-        this.shadow.currentTime = this.video.currentTime;
+        if(this.shadow !== this.video)
+            this.shadow.currentTime = this.video.currentTime;
         if(this.shadow.paused || this.shadow.ended) {
             this.startAnalysis();
         }
@@ -149,7 +168,7 @@ class VideoAnalyzer {
 
     showBar() {
         const barWidth = 600 / this.shadow.duration;
-        const threshold = document.getElementById("threshold").value;
+        const threshold = RATING_THRESHOLD;
         for(let i = 0; i < this.shadow.duration; i++){
             let color = "green";
             if(!this.ratings[i] || this.ratings[i].count < 5) {
@@ -239,13 +258,13 @@ class VideoAnalyzer {
         const d = (Math.floor(255 - avgLuminance*255));
         const r = (Math.floor(255 - rating * 255));
 
-        //show luminance in indicator
-        this.indicatorCtx.fillStyle = "rgb("+d+","+d+","+d+")";
-        this.indicatorCtx.fillRect(0, 0, 10, 20);
+        // //show luminance in indicator
+        // this.indicatorCtx.fillStyle = "rgb("+d+","+d+","+d+")";
+        // this.indicatorCtx.fillRect(0, 0, 10, 20);
         
-        //show rating in indicator
-        this.indicatorCtx.fillStyle = "rgb("+r+","+r+","+r+")";
-        this.indicatorCtx.fillRect(0, 0, 10, 10);
+        // //show rating in indicator
+        // this.indicatorCtx.fillStyle = "rgb("+r+","+r+","+r+")";
+        // this.indicatorCtx.fillRect(0, 0, 10, 10);
 
         //record calculated variance
         const second = Math.floor(this.shadow.currentTime);
@@ -258,12 +277,12 @@ class VideoAnalyzer {
         this.variances[second].record(avgLuminance);
         this.ratings[second].record(rating);
 
-        if(this.ratings[second].getAverage() > 0.05) {
-            this.indicatorCtx.fillStyle = "red";
-        }else{
-            this.indicatorCtx.fillStyle = "white";
-        }
-        this.indicatorCtx.fillRect(10, 0, 10, 20);
+        // if(this.ratings[second].getAverage() > 0.05) {
+        //     this.indicatorCtx.fillStyle = "red";
+        // }else{
+        //     this.indicatorCtx.fillStyle = "white";
+        // }
+        // this.indicatorCtx.fillRect(10, 0, 10, 20);
 
         this.showBar();
 
